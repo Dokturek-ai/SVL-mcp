@@ -21,7 +21,7 @@ export default function Home() {
           >
             MCP Apps
           </a>{" "}
-          that render inside ChatGPT.
+          that render inside ChatGPT, Cursor, or Claude.ai.
         </p>
 
         {connected && (
@@ -60,7 +60,7 @@ export default function Home() {
           <p>
             {connected
               ? "Connected to MCP host"
-              : "Not connected (open in ChatGPT to connect)"}
+              : "Not connected (open in ChatGPT, Cursor, or Claude.ai to connect)"}
           </p>
         </div>
       </main>

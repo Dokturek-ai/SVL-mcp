@@ -23,7 +23,7 @@ export default function CounterPage() {
 
         <p className="text-zinc-600 dark:text-zinc-400">
           A simple client-side counter to verify that React hydration and
-          interactivity work inside the ChatGPT iframe.
+          interactivity work inside the ChatGPT, Cursor, or Claude.ai iframe.
         </p>
 
         <div className="flex items-center gap-4">

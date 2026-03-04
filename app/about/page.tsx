@@ -19,8 +19,8 @@ export default function AboutPage() {
         <div className="flex flex-col gap-4 text-zinc-600 dark:text-zinc-400">
           <p>
             This is a minimal starter for building MCP Apps with Next.js.
-            It demonstrates client-side navigation working inside ChatGPT's
-            sandboxed iframe.
+            It demonstrates client-side navigation working inside ChatGPT's,
+            Cursor's, or Claude.ai's sandboxed iframe.
           </p>
           <p>
             The MCP server at <code className="text-zinc-800 dark:text-zinc-200">/mcp</code>{" "}

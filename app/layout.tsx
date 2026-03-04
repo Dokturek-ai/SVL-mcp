@@ -38,7 +38,7 @@ export default function RootLayout({
 }
 
 /**
- * Inline scripts that make a Next.js page work inside ChatGPT's sandboxed
+ * Inline scripts that make a Next.js page work inside ChatGPT's, Cursor's, or Claude.ai's sandboxed
  * iframe. `assetPrefix` in next.config.ts handles script/style URLs, so no
  * `<base>` tag is needed (a `<base>` tag would break CesiumJS Worker URLs).
  */

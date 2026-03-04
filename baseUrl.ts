@@ -2,7 +2,7 @@
  * Resolve the public base URL of the app.
  *
  * In development with a tunnel (ngrok, cloudflared, etc.), set BASE_URL in
- * your .env to the tunnel's HTTPS URL so that assets served inside ChatGPT's
+ * your .env to the tunnel's HTTPS URL so that assets served inside ChatGPT's, Cursor's, or Claude.ai's
  * iframe resolve correctly.
  *
  * Examples:
