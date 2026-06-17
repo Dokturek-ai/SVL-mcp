@@ -26,7 +26,8 @@ import {
 } from "@/app/lib/schemas";
 
 // Vercel serverless: /query může generovat odpověď desítky sekund.
-export const maxDuration = 90;
+// 60 s je strop pro Hobby plán; na Pro/Fluid compute lze zvýšit (max 300 s).
+export const maxDuration = 60;
 
 const UI_VERSION = "2026-06-17-01";
 const RESOURCE_URI = `ui://app/index.html?v=${UI_VERSION}`;
