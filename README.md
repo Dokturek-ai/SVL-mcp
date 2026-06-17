@@ -1,87 +1,130 @@
-# MCP Apps — Minimal Next.js Starter
+# Dokturek RAG MCP
 
-A minimal [Next.js](https://nextjs.org) starter for building [MCP Apps](https://modelcontextprotocol.io) — interactive UIs that MCP hosts render alongside tool calls.
+MCP server, který zpřístupňuje znalostní bázi **LightRAG** přes sadu
+**read-only** nástrojů a vizualizuje výsledky v interaktivním widgetu (MCP App).
+Slouží ke konverzaci a dotazování nad RAG — generování odpovědí, načítání
+kontextu a prohlížení grafu znalostí. Žádné zápisové ani mutační operace.
 
-## How it works
+Postaveno na [Next.js](https://nextjs.org), [`mcp-handler`](https://github.com/vercel/mcp-handler)
+a [`@modelcontextprotocol/ext-apps`](https://github.com/anthropics/ext-apps).
 
-The Next.js app serves two roles:
+## Jak to funguje
 
-1. **MCP server** (`app/mcp/route.ts`) — registers tools and resources via [`mcp-handler`](https://github.com/vercel/mcp-handler) and [`@modelcontextprotocol/ext-apps`](https://github.com/anthropics/ext-apps).
-2. **Widget UI** (`app/page.tsx`) — a React page that MCP hosts render inside a sandboxed iframe. The MCP route self-fetches the rendered page HTML and serves it as an MCP resource.
+Next.js aplikace plní dvě role:
 
-The `useMcpApp` hook (`app/hooks/use-mcp-app.ts`) connects to the host via the `App` class from `@modelcontextprotocol/ext-apps` and provides tool input/result data as React state.
+1. **MCP server** (`app/mcp/route.ts`) — registruje nástroje a resource widgetu.
+   Každý nástroj volá LightRAG FastAPI přes server-only klienta
+   (`app/lib/lightrag.ts`) a vrací `structuredContent` s diskriminačním polem
+   `kind`.
+2. **Widget UI** (`app/page.tsx`) — React stránka, kterou hostitel MCP vykreslí
+   v sandboxovaném iframe. MCP route si HTML stránky sám stáhne (self-fetch) a
+   nabídne jako MCP resource. Widget podle `kind` vykreslí příslušný pohled
+   (`app/components/*`).
 
-## Getting started
+Hook `useMcpApp` (`app/hooks/use-mcp-app.ts`) propojuje widget s hostitelem a
+poskytuje výsledek nástroje jako React state. **API klíč LightRAG nikdy
+neopouští server** — widget LightRAG nevolá, data dostává od hostitele přes
+bridge.
+
+## Nástroje
+
+| Nástroj | LightRAG endpoint | Účel |
+|---|---|---|
+| `query_rag` | `POST /query` | Dotaz → vygenerovaná odpověď + citace zdrojů |
+| `retrieve_context` | `POST /query/data` | Surový kontext (entity, vztahy, úseky) bez LLM |
+| `search_entities` | `GET /graph/label/search` | Fuzzy hledání entit (labelů) |
+| `get_subgraph` | `GET /graphs` | Podgraf okolo entity |
+| `list_labels` | `GET /graph/label/list` | Výpis všech entit |
+| `list_documents` | `POST /documents/paginated` | Stránkovaný seznam dokumentů |
+| `health_check` | `GET /health` | Stav a konfigurace systému |
+
+## Konfigurace prostředí
+
+Viz `.env.example`. Pro lokální dev zkopírujte do `.env`:
+
+| Proměnná | Popis |
+|---|---|
+| `LIGHTRAG_BASE_URL` | Základní URL LightRAG serveru (bez koncového lomítka) |
+| `LIGHTRAG_API_KEY` | API klíč LightRAG (hlavička `X-API-Key`) |
+| `BASE_URL` | Veřejná URL widgetu (tunel pro lokální dev) |
+
+Na Vercelu nastavte `LIGHTRAG_BASE_URL` a `LIGHTRAG_API_KEY` v
+**Project Settings → Environment Variables** (Production i Preview).
+
+## Začínáme
 
 ```bash
 pnpm install
 ```
 
-### Local development with a tunnel
+### Lokální vývoj s tunelem
 
-MCP Apps need a public HTTPS URL. Use [ngrok](https://ngrok.com) (or any tunnel):
+MCP hostitel vykresluje widget v iframe, který potřebuje veřejnou HTTPS URL.
+Použijte [ngrok](https://ngrok.com) (nebo libovolný tunel):
 
 ```bash
 ngrok http 3000
 ```
 
-Copy the HTTPS URL and set it in `.env`:
+HTTPS URL vložte do `.env`:
 
 ```
 BASE_URL=https://xxxx-xxx-xxx.ngrok-free.app
 ```
 
-Then start the dev server:
+Spusťte dev server:
 
 ```bash
 pnpm dev
 ```
 
-### Connect to a host
+### Připojení k hostiteli
 
-Add your MCP server URL to any MCP host that supports Apps:
+V hostiteli MCP (Claude.ai / Cursor / ChatGPT) zaregistrujte MCP server na
+adrese:
 
 ```
 https://xxxx-xxx-xxx.ngrok-free.app/mcp
 ```
 
-For example, in ChatGPT, Cursor, or Claude.ai: Settings > Apps > add the URL above.
+Např. v Settings → Apps / Connectors přidejte výše uvedenou URL.
 
-## Project structure
+### Kontrola a build
+
+```bash
+pnpm lint
+pnpm build
+```
+
+## Struktura projektu
 
 ```
 app/
-  page.tsx              — Homepage (widget UI)
-  about/page.tsx        — Example sub-page (navigation demo)
-  counter/page.tsx      — Example sub-page (interactivity demo)
-  mcp/route.ts          — MCP server endpoint
-  hooks/use-mcp-app.ts  — React hook for the MCP Apps bridge
-  layout.tsx            — Root layout with iframe bootstrap patches
-baseUrl.ts              — Public URL resolver (tunnel / Vercel)
-middleware.ts           — CORS headers for cross-origin iframe access
-next.config.ts          — assetPrefix for iframe asset loading
+  page.tsx              — Widget UI (router výsledků podle `kind`)
+  components/           — View komponenty pro jednotlivé nástroje
+  lib/lightrag.ts       — Server-only HTTP klient pro LightRAG + typy
+  lib/schemas.ts        — Zod vstupní schémata nástrojů
+  lib/types.ts          — Sdílené typy widgetu (klient)
+  mcp/route.ts          — MCP server endpoint (registrace 7 nástrojů)
+  hooks/use-mcp-app.ts  — React hook pro MCP Apps bridge
+  layout.tsx            — Root layout s iframe bootstrap patchi
+baseUrl.ts              — Resolver veřejné URL (tunel / Vercel)
+middleware.ts           — CORS hlavičky pro cross-origin iframe
+next.config.ts          — assetPrefix pro načítání assetů v iframe
 ```
 
-## Key files
+## Nasazení (Vercel)
 
-- **`app/mcp/route.ts`** — Define your tools and resources here. The `greet` tool is a minimal example.
-- **`app/page.tsx`** — Your widget UI. Edit this like any Next.js page. It receives tool data via `useMcpApp()`.
-- **`app/hooks/use-mcp-app.ts`** — Singleton `App` bridge with `sessionStorage` persistence. Provides `toolInput`, `toolResult`, and `connected` state.
+Projekt se nasazuje na [Vercel](https://vercel.com/new). Po nastavení env
+proměnných (`LIGHTRAG_BASE_URL`, `LIGHTRAG_API_KEY`) je MCP endpoint dostupný na
+`https://<vase-domena>/mcp`. `BASE_URL` se v produkci odvozuje automaticky z
+proměnných Vercelu.
 
-## Deploy
+> **Pozn.:** `/query` generuje odpověď LLM a může trvat desítky sekund — limit
+> serverless funkce je nastaven přes `maxDuration` v `app/mcp/route.ts`.
 
-Deploy to [Vercel](https://vercel.com/new) — no additional configuration needed. The `BASE_URL` is automatically derived from Vercel's environment variables in production.
+## Další zdroje
 
-Once deployed, connect it to any MCP host using:
-
-```
-https://your-app.vercel.app/mcp
-```
-
-For example, in ChatGPT, Cursor, or Claude.ai: Settings > Apps > add the URL above as a connector.
-
-## Learn more
-
-- [MCP Apps specification](https://modelcontextprotocol.io)
-- [@modelcontextprotocol/ext-apps](https://github.com/anthropics/ext-apps)
+- [MCP Apps specification](https://spec.modelcontextprotocol.io/specification/)
+- [@modelcontextprotocol/ext-apps](https://github.com/modelcontextprotocol/ext-apps)
 - [mcp-handler](https://github.com/vercel/mcp-handler)

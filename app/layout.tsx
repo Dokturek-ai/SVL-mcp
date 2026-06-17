@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MCP Apps Minimal Next.js",
-  description: "Minimal MCP Apps starter with Next.js",
+  title: "Dokturek RAG MCP",
+  description:
+    "MCP server pro dotazování znalostní báze LightRAG (read-only).",
 };
 
 export default function RootLayout({
