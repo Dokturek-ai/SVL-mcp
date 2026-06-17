@@ -65,7 +65,7 @@ async function ensureConnected() {
   const { App } = await import("@modelcontextprotocol/ext-apps");
 
   const app = new App(
-    { name: "mcp-nextjs-widget", version: "0.1.0" },
+    { name: "dokturek-rag-mcp", version: "0.1.0" },
     {},
     { autoResize: true },
   );
