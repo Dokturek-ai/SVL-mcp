@@ -40,8 +40,19 @@ const MAX_CHUNKS = 50;
 // Self-fetch: stáhne vyrenderovanou Next.js stránku jako HTML widgetu.
 // ---------------------------------------------------------------------------
 async function fetchPageHtml(path: string): Promise<string> {
-  const res = await fetch(`${baseURL}${path}`);
-  return res.text();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(`${baseURL}${path}`, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(
+        `Načtení HTML widgetu selhalo: HTTP ${res.status} pro ${path}.`,
+      );
+    }
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -156,13 +167,14 @@ const handler = createMcpHandler(async (server) => {
         const data = res.data ?? {};
         const entities = data.entities ?? [];
         const relationships = data.relationships ?? [];
-        const chunks = (data.chunks ?? []).slice(0, MAX_CHUNKS);
+        const allChunks = data.chunks ?? [];
+        const chunks = allChunks.slice(0, MAX_CHUNKS);
         const references = data.references ?? [];
         return {
           content: [
             text(
               `Načteno: ${entities.length} entit, ${relationships.length} vztahů, ` +
-                `${(data.chunks ?? []).length} úseků, ${references.length} zdrojů.`,
+                `${allChunks.length} úseků, ${references.length} zdrojů.`,
             ),
           ],
           structuredContent: {
@@ -172,6 +184,8 @@ const handler = createMcpHandler(async (server) => {
             entities,
             relationships,
             chunks,
+            total_chunks: allChunks.length,
+            truncated: allChunks.length > chunks.length,
             references,
             metadata: res.metadata ?? {},
           },
@@ -313,7 +327,14 @@ const handler = createMcpHandler(async (server) => {
     async (args) => {
       try {
         const res = await listDocuments(args);
-        const p = res.pagination;
+        const p = res.pagination ?? {
+          page: 1,
+          page_size: 0,
+          total_count: 0,
+          total_pages: 1,
+          has_next: false,
+          has_prev: false,
+        };
         return {
           content: [
             text(
@@ -362,7 +383,7 @@ const handler = createMcpHandler(async (server) => {
                 ".",
             ),
           ],
-          structuredContent: { kind: "health_check", ...res },
+          structuredContent: { ...res, kind: "health_check" },
         };
       } catch (err) {
         return errorResult("health_check", err);

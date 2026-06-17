@@ -45,7 +45,10 @@ function renderResult(result: RagResult) {
 
 export default function Home() {
   const { toolResult, connected } = useMcpApp();
-  const result = toolResult as RagResult | null;
+  const result =
+    toolResult && typeof toolResult === "object" && "kind" in toolResult
+      ? (toolResult as RagResult)
+      : null;
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">
@@ -63,10 +66,12 @@ export default function Home() {
           <Centered>
             Nepřipojeno — otevřete v hostiteli MCP (Claude.ai, Cursor, ChatGPT).
           </Centered>
-        ) : !result ? (
-          <Centered>Čekání na volání nástroje…</Centered>
-        ) : (
+        ) : result ? (
           renderResult(result)
+        ) : toolResult ? (
+          <Centered>Neplatný formát odpovědi nástroje.</Centered>
+        ) : (
+          <Centered>Čekání na volání nástroje…</Centered>
         )}
       </main>
     </div>

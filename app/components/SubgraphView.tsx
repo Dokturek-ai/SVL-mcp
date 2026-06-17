@@ -1,12 +1,18 @@
 import type { GraphEdge, GraphNode } from "../lib/types";
 import { Badge, Card, SectionTitle } from "./shared";
 
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : undefined;
+}
+
 function nodeLabel(node: GraphNode): string {
   const props = node.properties ?? {};
   return (
-    (props.entity_id as string) ??
-    (props.name as string) ??
-    node.labels?.[0] ??
+    nonEmptyString(props.entity_id) ??
+    nonEmptyString(props.name) ??
+    nonEmptyString(node.labels?.[0]) ??
     node.id
   );
 }

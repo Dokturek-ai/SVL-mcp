@@ -85,6 +85,8 @@ export type RagResult =
       entities: Entity[];
       relationships: Relationship[];
       chunks: Chunk[];
+      total_chunks?: number;
+      truncated?: boolean;
       references: Reference[];
       metadata: Record<string, unknown>;
     }

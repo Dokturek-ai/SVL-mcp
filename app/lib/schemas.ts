@@ -116,10 +116,11 @@ export const listLabelsShape = {} as const;
 
 export const listDocumentsShape = {
   status_filters: z
-    .array(z.string())
+    .array(z.enum(["pending", "processing", "processed", "failed"]))
     .optional()
     .describe(
-      "Filtr stavů dokumentů, např. ['PROCESSED', 'FAILED']. Prázdné = vše.",
+      "Filtr stavů dokumentů (malými písmeny), např. ['processed', 'failed']. " +
+        "Povolené hodnoty: 'pending', 'processing', 'processed', 'failed'. Prázdné = vše.",
     ),
   page: z
     .number()

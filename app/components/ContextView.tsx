@@ -7,6 +7,8 @@ export function ContextView({
   entities,
   relationships,
   chunks,
+  total_chunks,
+  truncated,
   references,
 }: {
   query: string;
@@ -14,6 +16,8 @@ export function ContextView({
   entities: Entity[];
   relationships: Relationship[];
   chunks: Chunk[];
+  total_chunks?: number;
+  truncated?: boolean;
   references: Reference[];
 }) {
   return (
@@ -25,7 +29,8 @@ export function ContextView({
           <Badge>režim: {mode}</Badge>
           <Badge>{entities.length} entit</Badge>
           <Badge>{relationships.length} vztahů</Badge>
-          <Badge>{chunks.length} úseků</Badge>
+          <Badge>{total_chunks ?? chunks.length} úseků</Badge>
+          {truncated && <Badge>zobrazen výřez</Badge>}
         </div>
       </div>
 
@@ -59,7 +64,7 @@ export function ContextView({
             {relationships.map((r, i) => (
               <Card key={`${r.src_id}-${r.tgt_id}-${i}`}>
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {r.src_id} → {r.tgt_id}
+                  {r.src_id ?? "?"} → {r.tgt_id ?? "?"}
                 </p>
                 {r.description && (
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">

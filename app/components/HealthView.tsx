@@ -38,7 +38,7 @@ export function HealthView({ data }: { data: Record<string, unknown> }) {
           <Row label="Verze API" value={data.api_version as string} />
           <Row
             label="Pipeline"
-            value={data.pipeline_busy ? "zaneprázdněná" : "volná"}
+            value={data.pipeline_busy === true ? "zaneprázdněná" : "volná"}
           />
           <Row label="Autentizace" value={data.auth_mode as string} />
           <Row label="LLM" value={config.llm_model as string} />
@@ -59,7 +59,9 @@ export function HealthView({ data }: { data: Record<string, unknown> }) {
 
       {data.webui_available != null && (
         <div>
-          <Badge>WebUI: {data.webui_available ? "dostupné" : "nedostupné"}</Badge>
+          <Badge>
+            WebUI: {data.webui_available === true ? "dostupné" : "nedostupné"}
+          </Badge>
         </div>
       )}
     </div>

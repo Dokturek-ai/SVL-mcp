@@ -125,6 +125,6 @@ proměnných Vercelu.
 
 ## Další zdroje
 
-- [MCP Apps specification](https://modelcontextprotocol.io)
-- [@modelcontextprotocol/ext-apps](https://github.com/anthropics/ext-apps)
+- [MCP Apps specification](https://spec.modelcontextprotocol.io/specification/)
+- [@modelcontextprotocol/ext-apps](https://github.com/modelcontextprotocol/ext-apps)
 - [mcp-handler](https://github.com/vercel/mcp-handler)
