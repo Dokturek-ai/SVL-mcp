@@ -1,4 +1,5 @@
 import { sign, verify, TTL, type AuthRequest } from "@/app/lib/auth";
+import { logConfigOnce } from "@/app/lib/config";
 import { AuthShell } from "../ui";
 
 // ---------------------------------------------------------------------------
@@ -9,6 +10,10 @@ import { AuthShell } from "../ui";
 // který se nese přes odeslání formuláře. Při návratu z /oauth/submit s chybou
 // přicházíme zpět už jen s `areq` + `error`.
 // ---------------------------------------------------------------------------
+
+// Odkaz na zásady zpracování os. údajů. Nastavte na reálnou stránku přes env;
+// výchozí míří na web Doktůrek.ai.
+const PRIVACY_URL = process.env.PRIVACY_URL ?? "https://dokturek.ai";
 
 function one(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
@@ -23,6 +28,7 @@ export default async function Authorize({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  logConfigOnce();
   const sp = await searchParams;
   const errorMsg = one(sp.error);
 
@@ -100,6 +106,15 @@ function Form({ areqToken, error }: { areqToken: string; error: string }) {
 
       <form method="post" action="/oauth/submit" className="flex flex-col gap-4">
         <input type="hidden" name="areq" value={areqToken} />
+        {/* Honeypot — skryté pole pro boty. Lidé ho nevidí ani nevyplní. */}
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="hidden"
+        />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Jméno" name="first_name" autoComplete="given-name" />
@@ -119,6 +134,28 @@ function Form({ areqToken, error }: { areqToken: string; error: string }) {
           placeholder="např. lékař, IT, management"
         />
 
+        <label className="mt-1 flex items-start gap-2.5 text-sm leading-relaxed text-ink/80">
+          <input
+            type="checkbox"
+            name="consent"
+            required
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-stroke accent-primary"
+          />
+          <span>
+            Souhlasím se zpracováním uvedených údajů (jméno, e-mail, pozice) za
+            účelem poskytnutí přístupu, v souladu se{" "}
+            <a
+              href={PRIVACY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary underline hover:text-primary-hover"
+            >
+              zásadami zpracování osobních údajů
+            </a>
+            .
+          </span>
+        </label>
+
         <button
           type="submit"
           className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-primary-hover"
@@ -128,8 +165,8 @@ function Form({ areqToken, error }: { areqToken: string; error: string }) {
       </form>
 
       <p className="mt-5 text-xs leading-relaxed text-ink/60">
-        Odesláním souhlasíte se zpracováním uvedených údajů pro účely poskytnutí
-        přístupu. Žádné heslo ani účet se nezakládá.
+        Správce údajů: Doktůrek.ai s.r.o. Žádné heslo ani účet se nezakládá.
+        Údaje slouží ke kontaktu ohledně přístupu ke znalostní bázi.
       </p>
     </AuthShell>
   );

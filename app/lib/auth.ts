@@ -30,7 +30,7 @@ export type Purpose = "client" | "areq" | "magic" | "code" | "access";
 export const TTL = {
   areq: 15 * 60, // autorizační požadavek nesený formulářem
   magic: 15 * 60, // magic-link v e-mailu
-  code: 2 * 60, // authorization code (jednorázová výměna)
+  code: 60, // authorization code (jednorázová výměna — krátké okno pro replay)
   access: 30 * 24 * 60 * 60, // access token (30 dní)
 } as const;
 

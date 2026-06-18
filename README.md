@@ -60,6 +60,8 @@ Viz `.env.example`. Pro lokální dev zkopírujte do `.env`:
 | `EMAIL_FROM` | Odesílatel na ověřené doméně, např. `Doktůrek.ai <noreply@dokturek.ai>` |
 | `NOTION_TOKEN` | Token interní Notion integrace (databáze s ní nasdílená) |
 | `NOTION_DATABASE_ID` | ID Notion databáze pro ukládání leadů |
+| `LEAD_FALLBACK_EMAIL` | Záložní adresa pro lead při výpadku Notion (ať se neztratí) |
+| `PRIVACY_URL` | Odkaz na zásady zpracování os. údajů (výchozí `https://dokturek.ai`) |
 
 Na Vercelu nastavte všechny proměnné v **Project Settings → Environment
 Variables** (Production i Preview).
@@ -106,8 +108,12 @@ Např. v Settings → Apps / Connectors přidejte výše uvedenou URL.
 
 ```bash
 pnpm lint
+pnpm test    # vitest — jednotky pro auth/JWT/PKCE a token endpoint
 pnpm build
 ```
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) spouští `lint` + `test` +
+`build` na každém PR a pushi do `main`.
 
 ## Struktura projektu
 
@@ -120,8 +126,11 @@ app/
   lib/schemas.ts        — Zod vstupní schémata nástrojů
   lib/types.ts          — Sdílené typy widgetu (klient)
   lib/auth.ts           — Stateless JWT (HS256) + PKCE pro OAuth bránu
-  lib/resend.ts         — Odeslání magic-link e-mailu (Resend)
-  lib/notion.ts         — Zápis leadu do Notion (REST)
+  lib/resend.ts         — Magic-link + záložní notifikace leadu (Resend)
+  lib/notion.ts         — Zápis leadu do Notion (REST, retry + cache schématu)
+  lib/ratelimit.ts      — In-memory rate-limit (anti-abuse /oauth/submit)
+  lib/log.ts            — Strukturované JSON logování
+  lib/config.ts         — Kontrola runtime konfigurace (chybějící env)
   mcp/route.ts          — MCP endpoint (7 nástrojů) obalený withMcpAuth
   oauth/                — authorize (formulář), submit, verify, token, register
   .well-known/          — OAuth metadata (authorization server + protected resource)
@@ -153,9 +162,18 @@ hostitel → /oauth/authorize → lead-formulář → e-mail (Resend) → /oauth
 5. `/oauth/verify` ověří odkaz, zapíše lead do Notion a vydá authorization code.
 6. `/oauth/token` vymění code (+PKCE) za access token; ten ověřuje `withMcpAuth`.
 
-> Výpadek Notion **neblokuje** přístup — zápis leadu je best-effort a chyba se
-> jen zaloguje. Magic-link i authorization code mají krátkou platnost (viz
-> `TTL` v `app/lib/auth.ts`).
+**Odolnost a ochrana:**
+- **Lead se neztrácí:** zápis do Notion má jeden retry; při selhání se lead
+  pošle na `LEAD_FALLBACK_EMAIL`. Výpadek Notion neblokuje přístup.
+- **Souhlas (GDPR):** formulář vyžaduje souhlas se zpracováním údajů s odkazem
+  na `PRIVACY_URL`. Správce: Doktůrek.ai s.r.o. Retenci leadů řešte v Notion.
+- **Anti-abuse:** `/oauth/submit` má honeypot a rate-limit (per IP i per e-mail)
+  proti e-mail bombingu. Limiter je in-memory (per-instance) — pro silnou
+  ochranu napříč instancemi doplňte sdílené úložiště (Upstash/KV).
+- **Krátká platnost:** magic-link 15 min, authorization code 60 s (viz `TTL`
+  v `app/lib/auth.ts`).
+- **Pozorovatelnost:** strukturované JSON logy (`app/lib/log.ts`) — sledujte
+  události `lead_fallback` / `lead_lost` / `*_failed` (napojte log drain/alert).
 
 ## Nasazení (Vercel)
 

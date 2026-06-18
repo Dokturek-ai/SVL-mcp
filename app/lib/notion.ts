@@ -131,13 +131,29 @@ export async function createLead(lead: Lead): Promise<void> {
     setProp(schema, props, name, value);
   }
 
-  const res = await fetch("https://api.notion.com/v1/pages", {
-    method: "POST",
-    headers: headers(true),
-    body: JSON.stringify({ parent: { database_id: DATABASE_ID }, properties: props }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!res.ok) {
-    throw new Error(`Notion: zápis leadu selhal (HTTP ${res.status}): ${await res.text()}`);
+  const body = JSON.stringify({ parent: { database_id: DATABASE_ID }, properties: props });
+
+  // Jeden retry s krátkým backoffem — síťová chyba nebo dočasná 5xx/429 ať
+  // hned neznamená ztrátu leadu (poslední pojistka je fallback e-mail).
+  let lastErr = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 400));
+    let res: Response;
+    try {
+      res = await fetch("https://api.notion.com/v1/pages", {
+        method: "POST",
+        headers: headers(true),
+        body,
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (err) {
+      lastErr = String(err);
+      continue;
+    }
+    if (res.ok) return;
+    lastErr = `HTTP ${res.status}: ${await res.text()}`;
+    // 4xx kromě 429 je trvalé — nemá smysl opakovat.
+    if (res.status < 500 && res.status !== 429) break;
   }
+  throw new Error(`Notion: zápis leadu selhal (${lastErr})`);
 }

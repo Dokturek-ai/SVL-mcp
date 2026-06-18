@@ -1,19 +1,42 @@
 import "server-only";
 
 // ---------------------------------------------------------------------------
-// Odeslání magic-link e-mailu přes Resend REST API.
+// Odeslání e-mailu přes Resend REST API: magic-link pro ověření přístupu
+// a záložní notifikace leadu (když selže zápis do Notion).
 //
 // Konfigurace (env):
-//   RESEND_API_KEY – API klíč Resend
-//   EMAIL_FROM     – adresa odesílatele na ověřené doméně
-//                    (např. "Doktůrek.ai <noreply@dokturek.ai>")
+//   RESEND_API_KEY      – API klíč Resend
+//   EMAIL_FROM          – adresa odesílatele na ověřené doméně
+//                         (např. "Doktůrek.ai <noreply@dokturek.ai>")
+//   LEAD_FALLBACK_EMAIL – kam poslat lead, když selže Notion (obchodní adresa)
 // ---------------------------------------------------------------------------
+
+import type { Lead } from "./auth";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 const EMAIL_FROM = process.env.EMAIL_FROM ?? "";
+const LEAD_FALLBACK_EMAIL = process.env.LEAD_FALLBACK_EMAIL ?? "";
 
 export function isEmailConfigured(): boolean {
   return Boolean(RESEND_API_KEY && EMAIL_FROM);
+}
+
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  if (!isEmailConfigured()) {
+    throw new Error("Resend není nakonfigurován (RESEND_API_KEY / EMAIL_FROM).");
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    signal: AbortSignal.timeout(10_000),
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: EMAIL_FROM, to, subject, html }),
+  });
+  if (!res.ok) {
+    throw new Error(`Resend: odeslání selhalo (HTTP ${res.status}): ${await res.text()}`);
+  }
 }
 
 function emailHtml(name: string, link: string): string {
@@ -56,24 +79,37 @@ function escapeHtml(s: string): string {
 }
 
 export async function sendMagicLink(to: string, name: string, link: string): Promise<void> {
-  if (!isEmailConfigured()) {
-    throw new Error("Resend není nakonfigurován (RESEND_API_KEY / EMAIL_FROM).");
-  }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    signal: AbortSignal.timeout(10_000),
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: EMAIL_FROM,
-      to,
-      subject: "Potvrďte přístup ke znalostní bázi Doktůrek.ai",
-      html: emailHtml(name, link),
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Resend: odeslání selhalo (HTTP ${res.status}): ${await res.text()}`);
-  }
+  await sendEmail(
+    to,
+    "Potvrďte přístup ke znalostní bázi Doktůrek.ai",
+    emailHtml(name, link),
+  );
+}
+
+export function isLeadFallbackConfigured(): boolean {
+  return isEmailConfigured() && Boolean(LEAD_FALLBACK_EMAIL);
+}
+
+/**
+ * Záložní doručení leadu e-mailem, když selže zápis do Notion — aby se lead
+ * neztratil. Nevyhazuje, pokud fallback není nakonfigurován (jen vrátí false).
+ */
+export async function sendLeadNotification(lead: Lead): Promise<boolean> {
+  if (!isLeadFallbackConfigured()) return false;
+  const rows = [
+    ["Jméno", `${lead.firstName} ${lead.lastName}`.trim()],
+    ["E-mail", lead.email],
+    ["Pozice", lead.position],
+  ]
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:4px 12px 4px 0;color:#71717a;">${escapeHtml(k)}</td><td style="padding:4px 0;font-weight:600;">${escapeHtml(v)}</td></tr>`,
+    )
+    .join("");
+  const html = `<!doctype html><html lang="cs"><body style="font-family:Arial,Helvetica,sans-serif;color:#130f3e;">
+    <h2 style="margin:0 0 4px;">Nový lead (záloha — Notion selhal)</h2>
+    <p style="color:#71717a;margin:0 0 12px;">Zápis do Notion se nezdařil, lead zachycen e-mailem. Doplňte ho ručně.</p>
+    <table>${rows}</table></body></html>`;
+  await sendEmail(LEAD_FALLBACK_EMAIL, "Doktůrek RAG — nový lead (záloha)", html);
+  return true;
 }

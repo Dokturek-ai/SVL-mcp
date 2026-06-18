@@ -1,6 +1,35 @@
 import { baseURL } from "@/baseUrl";
 import { sign, verify, TTL, type AuthRequest, type Lead } from "@/app/lib/auth";
 import { createLead, isNotionConfigured } from "@/app/lib/notion";
+import { sendLeadNotification } from "@/app/lib/resend";
+import { log } from "@/app/lib/log";
+
+// Uloží lead — primárně Notion, při selhání záložní e-mail. Cílem je lead
+// NEZTRATIT. Nikdy nevyhazuje (přístup se kvůli CRM neblokuje).
+async function captureLead(lead: Lead): Promise<void> {
+  if (isNotionConfigured()) {
+    try {
+      await createLead(lead);
+      log("info", "lead_saved", { sink: "notion", email: lead.email });
+      return;
+    } catch (err) {
+      log("error", "lead_notion_failed", { email: lead.email, error: String(err) });
+    }
+  } else {
+    log("warn", "lead_notion_unconfigured", { email: lead.email });
+  }
+
+  // Notion selhal nebo není nastaven → záložní e-mail, ať lead nezmizí.
+  try {
+    const sent = await sendLeadNotification(lead);
+    log(sent ? "warn" : "error", sent ? "lead_fallback" : "lead_lost", {
+      email: lead.email,
+      ...(sent ? {} : { reason: "fallback e-mail není nakonfigurován (LEAD_FALLBACK_EMAIL)" }),
+    });
+  } catch (err) {
+    log("error", "lead_lost", { email: lead.email, error: String(err) });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Ověření magic-linku.
@@ -36,16 +65,8 @@ export async function GET(req: Request) {
 
   const { lead, areq } = payload;
 
-  // Zápis leadu do Notion — neblokující. Výpadek CRM nesmí zabránit přístupu.
-  if (isNotionConfigured()) {
-    try {
-      await createLead(lead);
-    } catch (err) {
-      console.error("[oauth/verify] zápis leadu do Notion selhal:", err);
-    }
-  } else {
-    console.warn("[oauth/verify] Notion není nakonfigurován — lead se neukládá.");
-  }
+  // Zachycení leadu (Notion → fallback e-mail) — neblokující vůči přístupu.
+  await captureLead(lead);
 
   // Authorization code je jednorázový, krátce platný a váže e-mail, klienta,
   // redirect_uri a PKCE challenge pro pozdější ověření na /oauth/token.
