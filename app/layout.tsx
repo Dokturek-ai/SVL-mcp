@@ -1,22 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { baseURL } from "@/baseUrl";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin", "latin-ext"],
+  weight: ["800"],
 });
 
 export const metadata: Metadata = {
-  title: "Dokturek RAG MCP",
+  title: "Doktůrek.ai — znalostní báze pro vaše AI asistenty",
   description:
-    "MCP server pro dotazování znalostní báze LightRAG (read-only).",
+    "Připojte znalostní bázi Doktůrek.ai ke svému AI asistentovi přes MCP. " +
+    "Vracíme lékaře k pacientům.",
 };
 
 export default function RootLayout({
@@ -25,13 +28,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="cs" suppressHydrationWarning>
       <head>
         <IframeBootstrap baseUrl={baseURL} />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${dmSans.variable} ${bricolage.variable} antialiased`}>
         {children}
       </body>
     </html>
@@ -39,14 +40,16 @@ export default function RootLayout({
 }
 
 /**
- * Inline scripts that make a Next.js page work inside ChatGPT's, Cursor's, or Claude.ai's sandboxed
- * iframe. `assetPrefix` in next.config.ts handles script/style URLs, so no
- * `<base>` tag is needed (a `<base>` tag would break CesiumJS Worker URLs).
+ * Inline scripts that make the widget page work inside ChatGPT's, Cursor's, or
+ * Claude.ai's sandboxed iframe. `assetPrefix` in next.config.ts handles
+ * script/style URLs. The JS patches below run ONLY inside an iframe — on the
+ * public landing page and OAuth pages they would break normal navigation and
+ * external links, so `iframePatchFn` returns early when not embedded.
  */
 function IframeBootstrap({ baseUrl }: { baseUrl: string }) {
   return (
     <>
-      {/* Resolve relative URLs (/_next/static, /about, etc.) to the real server */}
+      {/* Resolve relative URLs (/_next/static, etc.) to the real server */}
       <base href={baseUrl} />
       <script
         dangerouslySetInnerHTML={{
@@ -65,18 +68,21 @@ function IframeBootstrap({ baseUrl }: { baseUrl: string }) {
 /**
  * Self-executing function injected as an inline `<script>`. It runs before
  * React hydrates and makes Next.js behave correctly inside an iframe whose
- * origin differs from the real server.
+ * origin differs from the real server. Outside an iframe it does nothing.
  *
- * NOTE: This function is serialised to a string via `.toString()` and
- * executed in a different context. TypeScript types here are purely for
- * readability — they are stripped when serialised.
+ * NOTE: serialised via `.toString()` and executed in a different context.
+ * TypeScript types here are purely for readability — stripped on serialise.
  */
 function iframePatchFn() {
+  const isInIframe = window.self !== window.top;
+  // Mimo iframe (landing, OAuth formulář) žádné patche — jinak by se rozbily
+  // prokliky a klientská navigace.
+  if (!isInIframe) return;
+
   const baseUrl: string = window.__baseUrl;
   const htmlElement = document.documentElement;
-  const isInIframe = window.self !== window.top;
 
-  // 1. Prevent the host from mutating <html> attributes (causes hydration errors)
+  // 1. Prevent the host from mutating <html> attributes (hydration errors)
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === "attributes" && mutation.target === htmlElement) {
@@ -127,12 +133,11 @@ function iframePatchFn() {
       if (!a?.href) return;
       const url = new URL(a.href, window.location.href);
       if (url.origin !== window.location.origin && url.origin !== appOrigin) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (window as any).openai?.openExternal?.({ href: a.href });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const openExternal = (window as any).openai?.openExternal;
+        if (typeof openExternal === "function") {
+          openExternal({ href: a.href });
           e.preventDefault();
-        } catch {
-          /* noop */
         }
       }
     },
@@ -140,7 +145,7 @@ function iframePatchFn() {
   );
 
   // 4. Patch fetch so RSC / data payloads go to the real server
-  if (isInIframe && window.location.origin !== appOrigin) {
+  if (window.location.origin !== appOrigin) {
     const originalFetch = window.fetch.bind(window);
 
     window.fetch = function patchedFetch(
