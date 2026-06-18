@@ -1,5 +1,5 @@
 import { baseURL } from "@/baseUrl";
-import { sign, verify, TTL, type AuthRequest } from "@/app/lib/auth";
+import { sign, verify, opaqueId, TTL, type AuthRequest } from "@/app/lib/auth";
 import { sendMagicLink } from "@/app/lib/resend";
 import { rateLimit, clientIp } from "@/app/lib/ratelimit";
 import { log } from "@/app/lib/log";
@@ -80,14 +80,17 @@ export async function POST(req: Request) {
     return backToForm(areqToken, "Pro pokračování je potřeba souhlas se zpracováním údajů.");
   }
 
-  // Rate-limit (proti zneužití odesílání e-mailů).
+  // Rate-limit (proti zneužití odesílání e-mailů). Pozn.: limiter je
+  // in-memory per-instance (viz app/lib/ratelimit.ts) — vědomě zvolená
+  // základní ochrana; pro cross-instance nasaďte sdílené úložiště.
   const ip = clientIp(req);
+  const leadId = opaqueId(email);
   if (!rateLimit(`ip:${ip}`, MAX_PER_IP, WINDOW_MS)) {
     log("warn", "submit_ratelimited", { scope: "ip", ip });
     return backToForm(areqToken, "Příliš mnoho pokusů. Zkuste to prosím za chvíli.");
   }
   if (!rateLimit(`email:${email}`, MAX_PER_EMAIL, WINDOW_MS)) {
-    log("warn", "submit_ratelimited", { scope: "email", email });
+    log("warn", "submit_ratelimited", { scope: "email", lead: leadId });
     return backToForm(areqToken, "Na tuto adresu jsme už odkaz poslali. Zkontrolujte schránku, případně to zkuste později.");
   }
 
@@ -101,10 +104,10 @@ export async function POST(req: Request) {
   try {
     await sendMagicLink(email, firstName, link);
   } catch (err) {
-    log("error", "magiclink_send_failed", { email, error: String(err) });
+    log("error", "magiclink_send_failed", { lead: leadId, error: String(err) });
     return backToForm(areqToken, "E-mail se nepodařilo odeslat. Zkuste to prosím znovu.");
   }
 
-  log("info", "magiclink_sent", { email });
+  log("info", "magiclink_sent", { lead: leadId });
   return toSent(email);
 }

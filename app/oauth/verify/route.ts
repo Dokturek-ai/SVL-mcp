@@ -1,33 +1,36 @@
+import { after } from "next/server";
 import { baseURL } from "@/baseUrl";
-import { sign, verify, TTL, type AuthRequest, type Lead } from "@/app/lib/auth";
+import { sign, verify, opaqueId, TTL, type AuthRequest, type Lead } from "@/app/lib/auth";
 import { createLead, isNotionConfigured } from "@/app/lib/notion";
 import { sendLeadNotification } from "@/app/lib/resend";
 import { log } from "@/app/lib/log";
 
 // Uloží lead — primárně Notion, při selhání záložní e-mail. Cílem je lead
-// NEZTRATIT. Nikdy nevyhazuje (přístup se kvůli CRM neblokuje).
+// NEZTRATIT. Nikdy nevyhazuje (přístup se kvůli CRM neblokuje). Do logů jde
+// jen neidentifikující hash e-mailu (PII se neukládá).
 async function captureLead(lead: Lead): Promise<void> {
+  const id = opaqueId(lead.email);
   if (isNotionConfigured()) {
     try {
       await createLead(lead);
-      log("info", "lead_saved", { sink: "notion", email: lead.email });
+      log("info", "lead_saved", { sink: "notion", lead: id });
       return;
     } catch (err) {
-      log("error", "lead_notion_failed", { email: lead.email, error: String(err) });
+      log("error", "lead_notion_failed", { lead: id, error: String(err) });
     }
   } else {
-    log("warn", "lead_notion_unconfigured", { email: lead.email });
+    log("warn", "lead_notion_unconfigured", { lead: id });
   }
 
   // Notion selhal nebo není nastaven → záložní e-mail, ať lead nezmizí.
   try {
     const sent = await sendLeadNotification(lead);
     log(sent ? "warn" : "error", sent ? "lead_fallback" : "lead_lost", {
-      email: lead.email,
+      lead: id,
       ...(sent ? {} : { reason: "fallback e-mail není nakonfigurován (LEAD_FALLBACK_EMAIL)" }),
     });
   } catch (err) {
-    log("error", "lead_lost", { email: lead.email, error: String(err) });
+    log("error", "lead_lost", { lead: id, error: String(err) });
   }
 }
 
@@ -65,14 +68,15 @@ export async function GET(req: Request) {
 
   const { lead, areq } = payload;
 
-  // Zachycení leadu (Notion → fallback e-mail) — neblokující vůči přístupu.
-  await captureLead(lead);
+  // Zachycení leadu běží AŽ PO odeslání redirectu (next/after), aby výpadek
+  // Notion/e-mailu nezdržoval návrat uživatele do asistenta.
+  after(() => captureLead(lead));
 
-  // Authorization code je jednorázový, krátce platný a váže e-mail, klienta,
-  // redirect_uri a PKCE challenge pro pozdější ověření na /oauth/token.
+  // Authorization code je jednorázový a krátce platný. `sub` je neidentifikující
+  // hash e-mailu — code se posílá v redirect URL, takže do něj nedáváme PII.
   const code = sign(
     {
-      sub: lead.email,
+      sub: opaqueId(lead.email),
       client_id: areq.client_id,
       redirect_uri: areq.redirect_uri,
       code_challenge: areq.code_challenge,

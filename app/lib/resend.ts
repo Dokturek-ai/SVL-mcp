@@ -35,7 +35,9 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
     body: JSON.stringify({ from: EMAIL_FROM, to, subject, html }),
   });
   if (!res.ok) {
-    throw new Error(`Resend: odeslání selhalo (HTTP ${res.status}): ${await res.text()}`);
+    // Tělo odpovědi nezahrnujeme — může nést adresy/detaily požadavku, které
+    // by se přes logování chyby dostaly do produkčních logů.
+    throw new Error(`Resend: odeslání selhalo (HTTP ${res.status}).`);
   }
 }
 

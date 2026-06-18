@@ -1,12 +1,19 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import crypto from "node:crypto";
+
+const previousAuthSecret = process.env.AUTH_SECRET;
 
 beforeAll(() => {
   process.env.AUTH_SECRET = "test-secret-at-least-16-chars-long";
 });
 
+afterAll(() => {
+  if (previousAuthSecret === undefined) delete process.env.AUTH_SECRET;
+  else process.env.AUTH_SECRET = previousAuthSecret;
+});
+
 // Import až po nastavení env (secret se čte líně, takže by stačilo i dřív).
-const { sign, verify, verifyPkce, TokenError } = await import("./auth");
+const { sign, verify, verifyPkce, opaqueId, TokenError } = await import("./auth");
 
 describe("sign/verify", () => {
   it("round-trip vrátí payload se správným purpose", () => {
@@ -54,5 +61,19 @@ describe("verifyPkce (S256)", () => {
 
   it("odmítne špatný verifier", () => {
     expect(verifyPkce("wrong-verifier", challenge)).toBe(false);
+  });
+});
+
+describe("opaqueId", () => {
+  it("je stabilní, neprázdné a neobsahuje vstup", () => {
+    const a = opaqueId("jan@nemocnice.cz");
+    const b = opaqueId("jan@nemocnice.cz");
+    expect(a).toBe(b);
+    expect(a.length).toBeGreaterThan(0);
+    expect(a).not.toContain("jan@nemocnice.cz");
+  });
+
+  it("se liší pro různé vstupy", () => {
+    expect(opaqueId("a@x.cz")).not.toBe(opaqueId("b@x.cz"));
   });
 });

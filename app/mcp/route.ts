@@ -409,16 +409,17 @@ async function verifyToken(
   try {
     const payload = verify<{ sub?: unknown; exp?: number }>(bearerToken, "access");
     // Fail-closed: token bez platného subjektu odmítneme (ne "unknown").
+    // `sub` je neidentifikující hash (opaqueId), slouží jen jako identifikátor.
     if (typeof payload.sub !== "string" || payload.sub.length === 0) {
       return undefined;
     }
-    const email = payload.sub;
+    const subject = payload.sub;
     return {
       token: bearerToken,
-      clientId: email,
+      clientId: subject,
       scopes: ["mcp"],
       ...(payload.exp ? { expiresAt: payload.exp } : {}),
-      extra: { email },
+      extra: { sub: subject },
     };
   } catch {
     return undefined;

@@ -118,3 +118,14 @@ export function verifyPkce(verifier: string, challenge: string): boolean {
   const b = Buffer.from(challenge);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
+
+// Neidentifikující, stabilní identifikátor odvozený z hodnoty (HMAC se
+// secretem). Slouží jako `sub` v tokenech a korelační klíč v logech, aby se
+// do URL/logů nedostala přímá PII (e-mail).
+export function opaqueId(value: string): string {
+  return crypto
+    .createHmac("sha256", secret())
+    .update(`id:${value}`)
+    .digest("base64url")
+    .slice(0, 22);
+}

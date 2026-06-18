@@ -12,11 +12,13 @@ export function log(
   event: string,
   data: Record<string, unknown> = {},
 ): void {
+  // Rezervovaná pole nesmí jít přepsat z `data` (jinak by šlo podvrhnout
+  // úroveň/název události) — spread dat jde první, pevná pole po něm.
   const line = JSON.stringify({
+    ...data,
     ts: new Date().toISOString(),
     level,
     event,
-    ...data,
   });
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);

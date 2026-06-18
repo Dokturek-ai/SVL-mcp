@@ -19,9 +19,20 @@ const RECOMMENDED: Record<string, () => boolean> = {
   LEAD_FALLBACK_EMAIL: () => Boolean(process.env.LEAD_FALLBACK_EMAIL),
 };
 
+function hasLeadSink(): boolean {
+  const notion =
+    Boolean(process.env.NOTION_TOKEN) &&
+    Boolean(process.env.NOTION_DATABASE_ID || process.env.NOTION_DATA_SOURCE_ID);
+  return notion || Boolean(process.env.LEAD_FALLBACK_EMAIL);
+}
+
 export function missingConfig(): { required: string[]; recommended: string[] } {
   const required = Object.keys(REQUIRED).filter((k) => !REQUIRED[k]());
   const recommended = Object.keys(RECOMMENDED).filter((k) => !RECOMMENDED[k]());
+  // Aspoň jeden cíl pro lead je nutný — jinak by se leady tiše ztrácely.
+  if (!hasLeadSink()) {
+    required.push("Notion (NOTION_TOKEN + NOTION_DATABASE_ID) nebo LEAD_FALLBACK_EMAIL");
+  }
   return { required, recommended };
 }
 
