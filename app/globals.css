@@ -1,26 +1,71 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ---------------------------------------------------------------------------
+   Doktůrek.ai design system — deep-violet medical-tech.
+   Bricolage Grotesque (display) + DM Sans (body), saturované fialové akcenty,
+   klidné světlé plochy, tmavé fialové gradientové sekce s lila glow.
+   --------------------------------------------------------------------------- */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand / primary */
+  --color-primary: #7c3bed;
+  --color-primary-hover: #6d39c6;
+  --color-primary-deep: #5914d2;
+
+  /* Accent / glow */
+  --color-lilac: #db9efa;
+  --color-orchid: #c058f3;
+
+  /* Neutrals */
+  --color-surface: #f4f3fc;
+  --color-stroke: #e5dffb;
+
+  /* Text */
+  --color-ink: #130f3e;
+
+  /* Hero gradient stops */
+  --color-grad-start: #20074b;
+  --color-grad-mid: #340b79;
+  --color-grad-end: #5c0986;
+
+  /* Fonts */
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-bricolage);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  --background: #ffffff;
+  --foreground: #130f3e;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+}
+
+/* Tmavý fialový gradient za hero/CTA sekcemi. */
+.dk-hero-gradient {
+  background-image: linear-gradient(
+    to bottom right,
+    #20074b 0%,
+    #340b79 50%,
+    #5c0986 100%
+  );
+}
+
+/* Atmosférický lila glow blob (jen na tmavých sekcích). */
+.dk-glow {
+  background-image: radial-gradient(circle, #db9efa, transparent 70%);
+}
+.dk-glow-orchid {
+  background-image: radial-gradient(circle, #c058f3, transparent 70%);
+}
+
+/* Displejová písmena — výrazná, těsně prostrkaná. */
+.dk-display {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
 }

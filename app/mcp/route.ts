@@ -1,5 +1,7 @@
 import { baseURL } from "@/baseUrl";
-import { createMcpHandler } from "mcp-handler";
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
+import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import { verify } from "@/app/lib/auth";
 import {
   registerAppTool,
   registerAppResource,
@@ -82,7 +84,7 @@ const handler = createMcpHandler(async (server) => {
     RESOURCE_URI,
     { mimeType: RESOURCE_MIME_TYPE },
     async () => {
-      const html = await fetchPageHtml("/");
+      const html = await fetchPageHtml("/widget");
       return {
         contents: [
           {
@@ -393,5 +395,42 @@ const handler = createMcpHandler(async (server) => {
   );
 });
 
-export const GET = handler;
-export const POST = handler;
+// ---------------------------------------------------------------------------
+// Vynucení přístupu: každý požadavek na MCP musí nést platný Bearer access
+// token (vydaný OAuth tokem po ověření e-mailu). Bez něj vrací withMcpAuth
+// 401 s hlavičkou WWW-Authenticate odkazující na metadata chráněného zdroje,
+// což hostiteli spustí OAuth flow.
+// ---------------------------------------------------------------------------
+async function verifyToken(
+  _req: Request,
+  bearerToken?: string,
+): Promise<AuthInfo | undefined> {
+  if (!bearerToken) return undefined;
+  try {
+    const payload = verify<{ sub?: unknown; exp?: number }>(bearerToken, "access");
+    // Fail-closed: token bez platného subjektu odmítneme (ne "unknown").
+    // `sub` je neidentifikující hash (opaqueId), slouží jen jako identifikátor.
+    if (typeof payload.sub !== "string" || payload.sub.length === 0) {
+      return undefined;
+    }
+    const subject = payload.sub;
+    return {
+      token: bearerToken,
+      clientId: subject,
+      scopes: ["mcp"],
+      ...(payload.exp ? { expiresAt: payload.exp } : {}),
+      extra: { sub: subject },
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+const authHandler = withMcpAuth(handler, verifyToken, {
+  required: true,
+  resourceMetadataPath: "/.well-known/oauth-protected-resource",
+  resourceUrl: `${baseURL}/mcp`,
+});
+
+export const GET = authHandler;
+export const POST = authHandler;
