@@ -140,9 +140,9 @@ Přístup k `/mcp` je chráněn standardním OAuth 2.1 tokem s PKCE. Celý tok j
 klienta, autorizační požadavek, magic-link, authorization code i access token)
 je podepsaný JWT (HS256) s tajemstvím `AUTH_SECRET`.
 
-```
-hostitel → /authorize → lead-formulář → e-mail (Resend) → /verify
-        → zápis leadu do Notion → authorization code → /token → access token → /mcp
+```text
+hostitel → /oauth/authorize → lead-formulář → e-mail (Resend) → /oauth/verify
+        → zápis leadu do Notion → authorization code → /oauth/token → access token → /mcp
 ```
 
 1. Hostitel objeví OAuth z `WWW-Authenticate` (401) a metadat
@@ -159,10 +159,14 @@ hostitel → /authorize → lead-formulář → e-mail (Resend) → /verify
 
 ## Nasazení (Vercel)
 
-Projekt se nasazuje na [Vercel](https://vercel.com/new). Po nastavení env
-proměnných (`LIGHTRAG_BASE_URL`, `LIGHTRAG_API_KEY`) je MCP endpoint dostupný na
+Projekt se nasazuje na [Vercel](https://vercel.com/new). Po nastavení **všech
+požadovaných** env proměnných (viz tabulka výše — minimálně `AUTH_SECRET`,
+LightRAG proměnné a e-mail/Notion integrace) je MCP endpoint dostupný na
 `https://<vase-domena>/mcp`. `BASE_URL` se v produkci odvozuje automaticky z
 proměnných Vercelu.
+
+> **Pozn.:** bez `AUTH_SECRET` a Resend konfigurace OAuth brána neprojde —
+> nová nasazení nastavte kompletně, jinak se nikdo nepřihlásí.
 
 > **Pozn.:** `/query` generuje odpověď LLM a může trvat desítky sekund — limit
 > serverless funkce je nastaven přes `maxDuration` v `app/mcp/route.ts`.

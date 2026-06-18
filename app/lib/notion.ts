@@ -57,6 +57,7 @@ async function getSchema(): Promise<Record<string, PropSchema>> {
   if (schemaCache) return schemaCache;
   const res = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}`, {
     headers: headers(),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) {
     throw new Error(`Notion: načtení schématu selhalo (HTTP ${res.status}): ${await res.text()}`);
@@ -134,6 +135,7 @@ export async function createLead(lead: Lead): Promise<void> {
     method: "POST",
     headers: headers(true),
     body: JSON.stringify({ parent: { database_id: DATABASE_ID }, properties: props }),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) {
     throw new Error(`Notion: zápis leadu selhal (HTTP ${res.status}): ${await res.text()}`);

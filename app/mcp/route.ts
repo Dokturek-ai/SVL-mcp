@@ -407,8 +407,12 @@ async function verifyToken(
 ): Promise<AuthInfo | undefined> {
   if (!bearerToken) return undefined;
   try {
-    const payload = verify<{ sub: string }>(bearerToken, "access");
-    const email = typeof payload.sub === "string" ? payload.sub : "unknown";
+    const payload = verify<{ sub?: unknown; exp?: number }>(bearerToken, "access");
+    // Fail-closed: token bez platného subjektu odmítneme (ne "unknown").
+    if (typeof payload.sub !== "string" || payload.sub.length === 0) {
+      return undefined;
+    }
+    const email = payload.sub;
     return {
       token: bearerToken,
       clientId: email,
