@@ -25,18 +25,23 @@ function oauthError(error: string, description: string, status = 400): Response 
 }
 
 export async function POST(req: Request) {
-  // Podporujeme form-encoded (standard) i JSON tělo.
-  let params: Record<string, string> = {};
+  // Podporujeme form-encoded (standard) i JSON tělo. JSON může nést cokoliv,
+  // proto čteme přes `unknown` a hodnoty ověřujeme typovými strážemi níže.
+  let params: Record<string, unknown> = {};
   const contentType = req.headers.get("content-type") ?? "";
   if (contentType.includes("application/json")) {
     try {
-      params = (await req.json()) as Record<string, string>;
+      params = (await req.json()) as Record<string, unknown>;
     } catch {
       return oauthError("invalid_request", "Tělo požadavku nelze přečíst.");
     }
   } else {
-    const form = await req.formData();
-    for (const [k, v] of form.entries()) params[k] = String(v);
+    try {
+      const form = await req.formData();
+      for (const [k, v] of form.entries()) params[k] = String(v);
+    } catch {
+      return oauthError("invalid_request", "Tělo požadavku nelze přečíst.");
+    }
   }
 
   if (params.grant_type !== "authorization_code") {
@@ -44,8 +49,8 @@ export async function POST(req: Request) {
   }
 
   const { code, redirect_uri, client_id, code_verifier } = params;
-  if (!code || !code_verifier) {
-    return oauthError("invalid_request", "Chybí code nebo code_verifier.");
+  if (typeof code !== "string" || typeof code_verifier !== "string") {
+    return oauthError("invalid_request", "Chybí nebo neplatné code / code_verifier.");
   }
 
   let payload: CodePayload;
@@ -55,10 +60,12 @@ export async function POST(req: Request) {
     return oauthError("invalid_grant", "Authorization code je neplatný nebo vypršel.");
   }
 
-  if (client_id && client_id !== payload.client_id) {
+  // Vazba kódu na klienta a redirect_uri se vynucuje povinně (ne jen když je
+  // parametr přítomen) — jinak by ji veřejný klient mohl obejít vynecháním.
+  if (client_id !== payload.client_id) {
     return oauthError("invalid_grant", "client_id neodpovídá vydanému kódu.");
   }
-  if (redirect_uri && redirect_uri !== payload.redirect_uri) {
+  if (redirect_uri !== payload.redirect_uri) {
     return oauthError("invalid_grant", "redirect_uri neodpovídá vydanému kódu.");
   }
   if (payload.code_challenge_method !== "S256" || !verifyPkce(code_verifier, payload.code_challenge)) {

@@ -52,7 +52,6 @@ export async function GET(req: Request) {
   const code = sign(
     {
       sub: lead.email,
-      lead,
       client_id: areq.client_id,
       redirect_uri: areq.redirect_uri,
       code_challenge: areq.code_challenge,

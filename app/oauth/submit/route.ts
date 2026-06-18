@@ -21,7 +21,15 @@ function backToForm(areqToken: string, error: string): Response {
 }
 
 export async function POST(req: Request) {
-  const form = await req.formData();
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return Response.redirect(
+      `${baseURL}/oauth/error?reason=${encodeURIComponent("Neplatné odeslání formuláře. Spusťte připojení znovu z vašeho AI asistenta.")}`,
+      303,
+    );
+  }
   const areqToken = String(form.get("areq") ?? "");
 
   let areq: AuthRequest;

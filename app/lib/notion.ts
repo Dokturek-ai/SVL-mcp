@@ -49,7 +49,12 @@ function headers(json = false): Record<string, string> {
   return h;
 }
 
+// Schéma je prakticky statické — cachujeme ho na úrovni modulu, ať se
+// nestahuje při každém zápisu leadu (per-instance, serverless běh je krátký).
+let schemaCache: Record<string, PropSchema> | null = null;
+
 async function getSchema(): Promise<Record<string, PropSchema>> {
+  if (schemaCache) return schemaCache;
   const res = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}`, {
     headers: headers(),
   });
@@ -57,7 +62,8 @@ async function getSchema(): Promise<Record<string, PropSchema>> {
     throw new Error(`Notion: načtení schématu selhalo (HTTP ${res.status}): ${await res.text()}`);
   }
   const data = (await res.json()) as { properties?: Record<string, PropSchema> };
-  return data.properties ?? {};
+  schemaCache = data.properties ?? {};
+  return schemaCache;
 }
 
 function setProp(
@@ -110,11 +116,19 @@ export async function createLead(lead: Lead): Promise<void> {
     setProp(schema, props, titleName, fullName || lead.email);
   }
 
-  setProp(schema, props, PROP.email, lead.email);
-  setProp(schema, props, PROP.position, lead.position);
-  setProp(schema, props, PROP.firstName, lead.firstName);
-  setProp(schema, props, PROP.lastName, lead.lastName);
-  setProp(schema, props, PROP.source, "Doktůrek RAG MCP");
+  // Ostatní sloupce. Přeskakujeme klíč shodný s title, aby ho konfigurovaný
+  // název (např. title sloupec pojmenovaný „Jméno") nepřepsal jen křestním.
+  const fields: ReadonlyArray<[string, string]> = [
+    [PROP.email, lead.email],
+    [PROP.position, lead.position],
+    [PROP.firstName, lead.firstName],
+    [PROP.lastName, lead.lastName],
+    [PROP.source, "Doktůrek RAG MCP"],
+  ];
+  for (const [name, value] of fields) {
+    if (name === titleName) continue;
+    setProp(schema, props, name, value);
+  }
 
   const res = await fetch("https://api.notion.com/v1/pages", {
     method: "POST",

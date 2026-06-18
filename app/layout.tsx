@@ -49,8 +49,8 @@ export default function RootLayout({
 function IframeBootstrap({ baseUrl }: { baseUrl: string }) {
   return (
     <>
-      {/* Resolve relative URLs (/_next/static, etc.) to the real server */}
-      <base href={baseUrl} />
+      {/* `<base>` se vkládá až uvnitř iframe (viz iframePatchFn) — na veřejných
+          stránkách by lámal fragmentové odkazy a relativní navigaci. */}
       <script
         dangerouslySetInnerHTML={{
           __html: `window.__baseUrl=${JSON.stringify(baseUrl)};`,
@@ -81,6 +81,12 @@ function iframePatchFn() {
 
   const baseUrl: string = window.__baseUrl;
   const htmlElement = document.documentElement;
+
+  // 0. Resolve relative URLs (/_next/static, etc.) to the real server.
+  //    Vkládáme jen v iframe — skript běží v <head> před zbytkem dokumentu.
+  const base = document.createElement("base");
+  base.href = baseUrl;
+  document.head.prepend(base);
 
   // 1. Prevent the host from mutating <html> attributes (hydration errors)
   const observer = new MutationObserver((mutations) => {
