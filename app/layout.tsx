@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { baseURL } from "@/baseUrl";
+import { Analytics } from "@vercel/analytics/next";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
       </head>
       <body className={`${dmSans.variable} ${bricolage.variable} antialiased`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
