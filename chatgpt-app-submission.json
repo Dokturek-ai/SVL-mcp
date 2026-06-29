@@ -128,20 +128,6 @@
       "tools_triggered": "list_documents",
       "expected_output": "Stránkovaný seznam dokumentů s celkovým počtem a rozpadem podle stavů (pending/processing/processed/failed); widget zobrazí přehled dokumentů.",
       "expected_output_url": null
-    },
-    {
-      "description": "Výpis všech entit ve znalostním grafu. Nevyžaduje znalost konkrétního obsahu báze.",
-      "user_prompt": "Vypiš entity ve znalostním grafu.",
-      "tools_triggered": "list_labels",
-      "expected_output": "Seznam všech entit (labelů) v grafu s jejich počtem; widget zobrazí výpis entit.",
-      "expected_output_url": null
-    },
-    {
-      "description": "Kontrola stavu a konfigurace serveru LightRAG. Nevyžaduje znalost obsahu báze.",
-      "user_prompt": "Je RAG server v pořádku a jaká je jeho konfigurace?",
-      "tools_triggered": "health_check",
-      "expected_output": "Stav serveru (např. 'healthy'), verze a souhrn konfigurace (LLM, embedding, úložiště, stav pipeline); widget zobrazí stav systému.",
-      "expected_output_url": null
     }
   ],
   "negative_test_cases": [
@@ -164,13 +150,6 @@
       "user_prompt": "Smaž ze znalostní báze dokument s ID 123.",
       "tools_triggered": null,
       "expected_output": "Žádný nástroj se nespustí (aplikace nepodporuje mazání ani úpravy); ChatGPT vysvětlí, že operace není dostupná.",
-      "expected_output_url": null
-    },
-    {
-      "description": "Běžná konverzační výměna bez záměru dotazovat se do znalostní báze. Aplikace se nemá vyvolat.",
-      "user_prompt": "Ahoj, jak se dnes máš?",
-      "tools_triggered": null,
-      "expected_output": "ChatGPT odpoví konverzačně bez volání nástrojů aplikace.",
       "expected_output_url": null
     }
   ]
