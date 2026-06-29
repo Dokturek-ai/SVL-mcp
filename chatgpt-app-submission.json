@@ -11,84 +11,84 @@
     "query_rag": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "query_rag pouze odešle dotaz do LightRAG (POST /query) a vrátí vygenerovanou odpověď s citacemi zdrojů. Nevytváří, neupravuje ani nemaže žádná data v bázi ani jinde — jde čistě o čtecí dotaz.",
-        "open_world_justification": "Nástroj komunikuje s externím systémem LightRAG (samostatná znalostní báze mimo ChatGPT) a odpověď generuje LLM nad načteným kontextem, takže výstup není deterministicky vázán na pevnou množinu dat. Nezapisuje však nic do veřejného internetu.",
+        "open_world_justification": "query_rag pouze odešle dotaz do vlastního (first-party) backendu LightRAG (POST /query) a vrátí vygenerovanou odpověď. Neprovádí žádný zápis do veřejně viditelného internetu (nepublikuje, neodesílá zprávy, nevytváří veřejný obsah), proto openWorldHint=false.",
         "destructive_justification": "Operace je čistě čtecí a idempotentní; opakované volání nezpůsobí žádné nevratné změny ani vedlejší efekty."
       }
     },
     "retrieve_context": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "retrieve_context volá POST /query/data a vrací pouze surový načtený kontext (entity, vztahy, textové úseky) bez generování odpovědi. Žádný zápis ani změna stavu.",
-        "open_world_justification": "Nástroj načítá data z externího systému LightRAG mimo ChatGPT. Pouze čte; do veřejného internetu nic nezapisuje.",
+        "open_world_justification": "retrieve_context jen načítá kontext z vlastního backendu LightRAG (POST /query/data). Nemění žádný veřejně viditelný stav internetu, proto openWorldHint=false.",
         "destructive_justification": "Pouze čtení dat; nemůže způsobit žádnou nevratnou změnu. Opakování je bezpečné."
       }
     },
     "search_entities": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "search_entities volá GET /graph/label/search a vrací jen seznam názvů entit odpovídajících hledanému řetězci. Nemodifikuje graf ani žádná data.",
-        "open_world_justification": "Vyhledává v externí znalostní bázi LightRAG mimo ChatGPT. Pouze čte; nezapisuje do veřejného internetu.",
+        "open_world_justification": "search_entities pouze čte z vlastního backendu LightRAG (GET /graph/label/search). Nezapisuje do veřejně viditelného internetu, proto openWorldHint=false.",
         "destructive_justification": "Čistě čtecí vyhledávání; žádné nevratné ani vedlejší efekty."
       }
     },
     "get_subgraph": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "get_subgraph volá GET /graphs a vrací uzly a hrany podgrafu okolo zadané entity. Pouze čte strukturu grafu, nic nemění.",
-        "open_world_justification": "Čte data z externího systému LightRAG mimo ChatGPT. Žádný zápis do veřejného internetu.",
+        "open_world_justification": "get_subgraph jen čte strukturu grafu z vlastního backendu LightRAG (GET /graphs). Nemění žádný veřejně viditelný stav internetu, proto openWorldHint=false.",
         "destructive_justification": "Pouze čtení grafu; žádné nevratné změny. Opakované volání je bezpečné."
       }
     },
     "list_labels": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "list_labels volá GET /graph/label/list a vrací výpis všech entit (labelů) v grafu. Žádná modifikace dat.",
-        "open_world_justification": "Načítá obsah externí znalostní báze LightRAG mimo ChatGPT. Pouze čte; nezapisuje do veřejného internetu.",
+        "open_world_justification": "list_labels pouze čte výpis entit z vlastního backendu LightRAG (GET /graph/label/list). Nezapisuje do veřejně viditelného internetu, proto openWorldHint=false.",
         "destructive_justification": "Čistě čtecí výpis; žádné nevratné ani vedlejší efekty."
       }
     },
     "list_documents": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "list_documents volá POST /documents/paginated pouze pro načtení stránkovaného seznamu dokumentů a souhrnných počtů podle stavu. POST se zde používá jen pro předání filtrů/stránkování — nevytváří ani nemění žádné dokumenty.",
-        "open_world_justification": "Načítá metadata dokumentů z externího systému LightRAG mimo ChatGPT. Pouze čte; do veřejného internetu nic nezapisuje.",
+        "open_world_justification": "list_documents jen načítá metadata dokumentů z vlastního backendu LightRAG (POST /documents/paginated, kde POST slouží pouze k předání filtrů/stránkování). Nemění žádný veřejně viditelný stav internetu, proto openWorldHint=false.",
         "destructive_justification": "Pouze čtení seznamu dokumentů; žádné nevratné změny. Opakování je bezpečné."
       }
     },
     "health_check": {
       "annotations": {
         "readOnlyHint": true,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "health_check volá GET /health a vrací stav serveru LightRAG a jeho konfiguraci. Žádný zápis ani změna stavu.",
-        "open_world_justification": "Dotazuje se na stav externího systému LightRAG mimo ChatGPT. Pouze čte; nezapisuje do veřejného internetu.",
+        "open_world_justification": "health_check jen čte stav a konfiguraci vlastního backendu LightRAG (GET /health). Nezapisuje do veřejně viditelného internetu, proto openWorldHint=false.",
         "destructive_justification": "Čistě čtecí kontrola stavu; žádné nevratné ani vedlejší efekty."
       }
     }
