@@ -221,12 +221,17 @@ function SiteFooter() {
         <p className="text-sm text-ink/60">
           Vracíme lékaře k pacientům. · Doktůrek.ai s.r.o.
         </p>
-        <a
-          href="https://dokturek.ai"
-          className="text-sm font-semibold text-primary hover:text-primary-hover"
-        >
-          dokturek.ai →
-        </a>
+        <div className="flex items-center gap-4 text-sm font-semibold text-primary">
+          <a href="/privacy" className="hover:text-primary-hover">
+            Soukromí
+          </a>
+          <a href="/terms" className="hover:text-primary-hover">
+            Podmínky
+          </a>
+          <a href="https://dokturek.ai" className="hover:text-primary-hover">
+            dokturek.ai →
+          </a>
+        </div>
       </div>
     </footer>
   );
