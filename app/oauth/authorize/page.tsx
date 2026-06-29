@@ -11,9 +11,9 @@ import { AuthShell } from "../ui";
 // přicházíme zpět už jen s `areq` + `error`.
 // ---------------------------------------------------------------------------
 
-// Odkaz na zásady zpracování os. údajů. Nastavte na reálnou stránku přes env;
-// výchozí míří na web Doktůrek.ai.
-const PRIVACY_URL = process.env.PRIVACY_URL ?? "https://dokturek.ai";
+// Odkaz na zásady zpracování os. údajů. Výchozí míří na vlastní stránku
+// /privacy v této aplikaci; lze přepsat přes env (PRIVACY_URL).
+const PRIVACY_URL = process.env.PRIVACY_URL ?? "/privacy";
 
 function one(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
