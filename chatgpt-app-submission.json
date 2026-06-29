@@ -1,0 +1,177 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "Doktůrek RAG",
+    "subtitle": "Dotazy do znalostní báze RAG",
+    "description": "Doktůrek RAG zpřístupňuje znalostní bázi LightRAG přímo v konverzaci. Klade dotazy nad bází, vrací vygenerované odpovědi s citacemi zdrojů, načítá surový kontext (entity, vztahy a textové úseky) a umožňuje prozkoumat znalostní graf — vyhledat entity, zobrazit propojený podgraf okolo entity nebo vypsat všechny entity. Dále umí vypsat dokumenty ve znalostní bázi včetně stavu jejich zpracování a zkontrolovat stav a konfiguraci serveru. Výsledky se vykreslují v interaktivním widgetu (odpověď se zdroji, seznam entit, vizualizace podgrafu, přehled dokumentů). Aplikace je výhradně pro čtení — neprovádí žádné zápisové, mutační ani destruktivní operace. Přístup je chráněn bránou OAuth 2.1 (PKCE) s ověřením e-mailu.",
+    "category": "PRODUCTIVITY"
+  },
+  "tools": {
+    "query_rag": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "query_rag pouze odešle dotaz do LightRAG (POST /query) a vrátí vygenerovanou odpověď s citacemi zdrojů. Nevytváří, neupravuje ani nemaže žádná data v bázi ani jinde — jde čistě o čtecí dotaz.",
+        "open_world_justification": "query_rag pouze odešle dotaz do vlastního (first-party) backendu LightRAG (POST /query) a vrátí vygenerovanou odpověď. Neprovádí žádný zápis do veřejně viditelného internetu (nepublikuje, neodesílá zprávy, nevytváří veřejný obsah), proto openWorldHint=false.",
+        "destructive_justification": "Operace je čistě čtecí a idempotentní; opakované volání nezpůsobí žádné nevratné změny ani vedlejší efekty."
+      }
+    },
+    "retrieve_context": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "retrieve_context volá POST /query/data a vrací pouze surový načtený kontext (entity, vztahy, textové úseky) bez generování odpovědi. Žádný zápis ani změna stavu.",
+        "open_world_justification": "retrieve_context jen načítá kontext z vlastního backendu LightRAG (POST /query/data). Nemění žádný veřejně viditelný stav internetu, proto openWorldHint=false.",
+        "destructive_justification": "Pouze čtení dat; nemůže způsobit žádnou nevratnou změnu. Opakování je bezpečné."
+      }
+    },
+    "search_entities": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "search_entities volá GET /graph/label/search a vrací jen seznam názvů entit odpovídajících hledanému řetězci. Nemodifikuje graf ani žádná data.",
+        "open_world_justification": "search_entities pouze čte z vlastního backendu LightRAG (GET /graph/label/search). Nezapisuje do veřejně viditelného internetu, proto openWorldHint=false.",
+        "destructive_justification": "Čistě čtecí vyhledávání; žádné nevratné ani vedlejší efekty."
+      }
+    },
+    "get_subgraph": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "get_subgraph volá GET /graphs a vrací uzly a hrany podgrafu okolo zadané entity. Pouze čte strukturu grafu, nic nemění.",
+        "open_world_justification": "get_subgraph jen čte strukturu grafu z vlastního backendu LightRAG (GET /graphs). Nemění žádný veřejně viditelný stav internetu, proto openWorldHint=false.",
+        "destructive_justification": "Pouze čtení grafu; žádné nevratné změny. Opakované volání je bezpečné."
+      }
+    },
+    "list_labels": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "list_labels volá GET /graph/label/list a vrací výpis všech entit (labelů) v grafu. Žádná modifikace dat.",
+        "open_world_justification": "list_labels pouze čte výpis entit z vlastního backendu LightRAG (GET /graph/label/list). Nezapisuje do veřejně viditelného internetu, proto openWorldHint=false.",
+        "destructive_justification": "Čistě čtecí výpis; žádné nevratné ani vedlejší efekty."
+      }
+    },
+    "list_documents": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "list_documents volá POST /documents/paginated pouze pro načtení stránkovaného seznamu dokumentů a souhrnných počtů podle stavu. POST se zde používá jen pro předání filtrů/stránkování — nevytváří ani nemění žádné dokumenty.",
+        "open_world_justification": "list_documents jen načítá metadata dokumentů z vlastního backendu LightRAG (POST /documents/paginated, kde POST slouží pouze k předání filtrů/stránkování). Nemění žádný veřejně viditelný stav internetu, proto openWorldHint=false.",
+        "destructive_justification": "Pouze čtení seznamu dokumentů; žádné nevratné změny. Opakování je bezpečné."
+      }
+    },
+    "health_check": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "health_check volá GET /health a vrací stav serveru LightRAG a jeho konfiguraci. Žádný zápis ani změna stavu.",
+        "open_world_justification": "health_check jen čte stav a konfiguraci vlastního backendu LightRAG (GET /health). Nezapisuje do veřejně viditelného internetu, proto openWorldHint=false.",
+        "destructive_justification": "Čistě čtecí kontrola stavu; žádné nevratné ani vedlejší efekty."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "Dotaz do znalostní báze s vygenerovanou odpovědí a citacemi zdrojů, vykreslenou ve widgetu. NAHRAĎTE <TÉMA> tématem, které ve vaší znalostní bázi skutečně existuje.",
+      "user_prompt": "Shrň, co znalostní báze obsahuje o tématu <TÉMA>, a uveď zdroje.",
+      "tools_triggered": "query_rag",
+      "expected_output": "Vygenerovaná odpověď shrnující dané téma, doplněná o seznam citovaných zdrojů; widget zobrazí odpověď i zdroje.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Načtení surového kontextu (entity, vztahy, textové úseky) bez generování odpovědi LLM. NAHRAĎTE <TÉMA> reálným tématem z báze.",
+      "user_prompt": "Najdi mi surový kontext (entity a vztahy) k tématu <TÉMA>, bez vygenerované odpovědi.",
+      "tools_triggered": "retrieve_context",
+      "expected_output": "Seznam nalezených entit, vztahů a textových úseků s počty; bez vygenerované textové odpovědi. Widget zobrazí strukturovaný kontext.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Fuzzy vyhledání entit v grafu podle textu. NAHRAĎTE <POJEM> řetězcem, který odpovídá entitám ve vaší bázi.",
+      "user_prompt": "Které entity ve znalostní bázi souvisejí s pojmem <POJEM>?",
+      "tools_triggered": "search_entities",
+      "expected_output": "Seznam názvů entit (labelů) seřazený podle relevance; widget zobrazí nalezené entity.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Zobrazení propojeného podgrafu okolo konkrétní entity. NAHRAĎTE <ENTITA> názvem entity, která ve vaší bázi existuje (ideálně získaným ze search_entities nebo list_labels).",
+      "user_prompt": "Zobraz mi podgraf okolo entity <ENTITA> do hloubky 2.",
+      "tools_triggered": "get_subgraph",
+      "expected_output": "Uzly a hrany podgrafu okolo zadané entity včetně počtu uzlů a hran; widget vykreslí vizualizaci grafu.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Výpis dokumentů ve znalostní bázi včetně stavu zpracování a souhrnných počtů. Nevyžaduje znalost konkrétního obsahu báze.",
+      "user_prompt": "Kolik dokumentů je ve znalostní bázi a v jakém jsou stavu zpracování?",
+      "tools_triggered": "list_documents",
+      "expected_output": "Stránkovaný seznam dokumentů s celkovým počtem a rozpadem podle stavů (pending/processing/processed/failed); widget zobrazí přehled dokumentů.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Výpis všech entit ve znalostním grafu. Nevyžaduje znalost konkrétního obsahu báze.",
+      "user_prompt": "Vypiš entity ve znalostním grafu.",
+      "tools_triggered": "list_labels",
+      "expected_output": "Seznam všech entit (labelů) v grafu s jejich počtem; widget zobrazí výpis entit.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Kontrola stavu a konfigurace serveru LightRAG. Nevyžaduje znalost obsahu báze.",
+      "user_prompt": "Je RAG server v pořádku a jaká je jeho konfigurace?",
+      "tools_triggered": "health_check",
+      "expected_output": "Stav serveru (např. 'healthy'), verze a souhrn konfigurace (LLM, embedding, úložiště, stav pipeline); widget zobrazí stav systému.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Obecný dotaz na aktuální informace ze světa, který nemá nic společného se znalostní bází. Aplikace se nemá vyvolat.",
+      "user_prompt": "Jaké bude zítra počasí v Praze?",
+      "tools_triggered": null,
+      "expected_output": "ChatGPT odpoví bez vyvolání jakéhokoli nástroje aplikace; žádný RAG dotaz se nespustí.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Žádost o programování / obecnou pomoc nesouvisející se znalostní bází. Aplikace se nemá vyvolat.",
+      "user_prompt": "Napiš mi v Pythonu funkci, která seřadí seznam čísel.",
+      "tools_triggered": null,
+      "expected_output": "ChatGPT odpoví běžným způsobem bez volání nástrojů aplikace.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Pokus o zápisovou/mutační operaci. Aplikace je výhradně pro čtení a nemá žádný nástroj, který by dokument smazal nebo změnil — žádný nástroj se nemá vyvolat.",
+      "user_prompt": "Smaž ze znalostní báze dokument s ID 123.",
+      "tools_triggered": null,
+      "expected_output": "Žádný nástroj se nespustí (aplikace nepodporuje mazání ani úpravy); ChatGPT vysvětlí, že operace není dostupná.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Běžná konverzační výměna bez záměru dotazovat se do znalostní báze. Aplikace se nemá vyvolat.",
+      "user_prompt": "Ahoj, jak se dnes máš?",
+      "tools_triggered": null,
+      "expected_output": "ChatGPT odpoví konverzačně bez volání nástrojů aplikace.",
+      "expected_output_url": null
+    }
+  ]
+}

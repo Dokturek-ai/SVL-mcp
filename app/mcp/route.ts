@@ -105,10 +105,13 @@ const handler = createMcpHandler(async (server) => {
     },
   );
 
+  // Všechny nástroje jsou výhradně pro čtení a komunikují jen s vlastním
+  // (first-party) LightRAG backendem — nemění žádný veřejně viditelný stav
+  // internetu, proto openWorldHint=false (v souladu s definicí recenze OpenAI).
   const READ_ONLY = {
     readOnlyHint: true,
     destructiveHint: false,
-    openWorldHint: true,
+    openWorldHint: false,
   } as const;
   const UI_META = { ui: { resourceUri: RESOURCE_URI } } as const;
 
